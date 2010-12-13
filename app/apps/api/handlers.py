@@ -10,8 +10,6 @@ class OmniApiHandler(RequestHandler):
     def get(self):
         """Simply returns a Response object with an enigmatic salutation."""
 
-        d = Digg2()
-        o = d.comment.getInfo(comment_ids="20100728165300:34051976")
         return Response(o)
 
 
