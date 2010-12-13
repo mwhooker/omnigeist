@@ -1,8 +1,7 @@
 import urlparse
+from omnigeist.activity import provider
 
-#TODO: move to config
-activity_map = {'digg': 'omnigeist.activity.digg.Digg'}
-map(__import__, activity_map.values())
+activity_map = {'digg': 'Digg'}
 
 def canonicalize_url(url):
     """Canoninicalize urls
@@ -17,19 +16,21 @@ def canonicalize_url(url):
     scheme, netloc, path, query, _ = urlparse.urlsplit(url)
 
     # lowercase scheme and netloc
-    scheme, netloc = map(str.lower, [scheme, netloc])
+    scheme, netloc = map(unicode.lower, [scheme, netloc])
 
     #remove default port if exists
     if netloc[-3:] == ':80':
         netloc = netloc[:-3]
 
-    return urlparse.urlunsplit((scheme, netloc, path, query))
+    return urlparse.urlunsplit((scheme, netloc, path, query, None))
 
 def fanout(url):
     c_url = canonicalize_url(url)
     for host in activity_map:
-        klass = __import__(activity_map[host])
-        activity = klass(c_url)
-        if not klass.exists:
+        #klass = __import__(activity_map[host], globals(), locals())
+        klass = getattr(provider, activity_map[host])
+        try:
+            activity = klass(c_url)
+        except:
             continue
         activity.write_events()
