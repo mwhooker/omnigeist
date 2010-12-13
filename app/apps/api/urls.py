@@ -21,6 +21,7 @@ def get_rules(app):
     """
     rules = [
         Rule('/', endpoint='omni', handler='apps.api.handlers.OmniApiHandler'),
+        Rule('/shorturl/resolve', endpoint='resolve-shorturl', handler='apps.api.handlers.ResolveShortUrlHandler'),
     ]
 
     return rules
