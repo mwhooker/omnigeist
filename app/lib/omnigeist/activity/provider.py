@@ -1,10 +1,8 @@
 import logging
 
-from google.appengine.ext import db
 from digg.api import Digg2
 
 from omnigeist.activity import abstract
-from omnigeist.model import model
 
 class Digg(abstract.Activity):
 
@@ -18,20 +16,25 @@ class Digg(abstract.Activity):
         logging.debug(info)
 
         if info['count'] == 0:
-            raise Exception("doesn't exist")
+            raise abstract.NoActivityException()
 
         story = info['stories'][0]
         self.data['ref_id'] = story['story_id']
         self.data['diggs'] =  story['diggs']
         self.data['permalink'] = story['permalink']
-        self.url = url
-
-    def _create_epos(self):
-        epos = model.Epos.get_or_insert(self.root_key, host='digg',
-                                        url=db.Link(self.url),
-                                       **self.data)
-        logging.debug(epos)
 
 
-    def write_events(self):
-        pass
+    def events(self, start_date):
+
+        c = CommentEvent('kind')
+        c['diggs'] = 4
+        c['buries'] = 1
+        c['body'] = 'test'
+        c['author'] = 'matt'
+        c['ref_id'] = '1243'
+        yield c
+
+class CommentEvent(abstract.Event):
+
+    def get_key(self):
+        return self['ref_id']

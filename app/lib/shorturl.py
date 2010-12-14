@@ -23,7 +23,7 @@ class MemcacheAdapter(httplib2.FileCache):
     def set(self, key, value):
         self.client.set(key, value, namespace=self.namespace)
 
-h = httplib2.Http(MemcacheAdapter('shorturl'))
+h = httplib2.Http(cache=MemcacheAdapter('shorturl'))
 
 def resolve(url):
 
@@ -37,6 +37,9 @@ def resolve(url):
     try: 
         # resp['content-location'] doesn't work as detailed here
         # http://code.google.com/p/httplib2/issues/detail?id=19
-        return resp.previous['location']
+        if resp.previous is None:
+            return url
+        else:
+            return resp.previous['location']
     except KeyError:
         raise ResolveException()

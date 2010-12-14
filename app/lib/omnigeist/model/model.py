@@ -9,11 +9,12 @@ class Epos(db.Expando):
     # The resource we're tracking
     url = db.LinkProperty()
     ref_id = db.StringProperty()
-    created_on = db.DateProperty(auto_now_add=True)
+    created_on = db.DateTimeProperty(auto_now_add=True)
+    updated_on = db.DateTimeProperty(auto_now=True)
 
 class UserActivity(polymodel.PolyModel):
-    author = db.StringProperty()
-    ref_id = db.StringProperty()
+    author = db.StringProperty(required=True)
+    ref_id = db.StringProperty(required=True)
     epos = db.ReferenceProperty(Epos)
 
 class UserComment(UserActivity):
@@ -23,3 +24,15 @@ class UserComment(UserActivity):
 class DiggUserComment(UserComment):
     diggs = db.IntegerProperty()
     buries = db.IntegerProperty()
+
+
+def activity_factory(event_kind):
+    return DiggUserComment
+
+
+"""
+def activity_from_event(event):
+    if not isinstance(event, activity.Event):
+        raise ValueError('event must be of type activity.Event')
+    model_klass = activity_factory(event.kind)
+"""

@@ -2,13 +2,14 @@
 import logging
 import shorturl
 from tipfy import RequestHandler, Response, render_json_response
-from omnigeist import activity
+from omnigeist import fanout
 
 
 class OmniApiHandler(RequestHandler):
     def get(self):
         """Simply returns a Response object with an enigmatic salutation."""
-        activity.fanout(self.request.args['url'])
+        logging.debug("fanout")
+        fanout.fanout(self.request.args['url'])
         return Response("OK")
 
 
