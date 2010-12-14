@@ -13,9 +13,12 @@ class Epos(db.Expando):
     updated_on = db.DateTimeProperty(auto_now=True)
 
 class UserActivity(polymodel.PolyModel):
-    author = db.StringProperty(required=True)
     ref_id = db.StringProperty(required=True)
-    epos = db.ReferenceProperty(Epos)
+    author = db.StringProperty()
+    activity_created = db.DateTimeProperty()
+    created_on = db.DateTimeProperty(auto_now_add=True)
+    updated_on = db.DateTimeProperty(auto_now=True)
+    #epos = db.ReferenceProperty(Epos)
 
 class UserComment(UserActivity):
     reply_to = db.SelfReferenceProperty()

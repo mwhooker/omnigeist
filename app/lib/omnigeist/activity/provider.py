@@ -1,40 +1,54 @@
 import logging
+from datetime import datetime
 
-from digg.api import Digg2
+from digg.api import Digg, Digg2
 
 from omnigeist.activity import abstract
 
-class Digg(abstract.Activity):
+class DiggProvider(abstract.Activity):
 
     def __init__(self, url):
-        super(Digg, self).__init__(url)
+        super(DiggProvider, self).__init__(url)
         self.data = {}
-        self.digg = Digg2()
+        digg = Digg2()
 
         link = ",".join([url])
-        info = self.digg.story.getInfo(links=link)
+        info = digg.story.getInfo(links=link)
         logging.debug(info)
 
         if info['count'] == 0:
             raise abstract.NoActivityException()
 
         story = info['stories'][0]
-        self.data['ref_id'] = story['story_id']
+        self.story_id = self.data['ref_id'] = story['story_id']
         self.data['diggs'] =  story['diggs']
         self.data['permalink'] = story['permalink']
 
 
     def events(self, start_date):
+        #TODO: Digg2 api broken for comments
+        digg = Digg()
+        ret = digg.story.getComments(story_id=self.story_id)
 
-        c = CommentEvent('kind')
-        c['diggs'] = 4
-        c['buries'] = 1
-        c['body'] = 'test'
-        c['author'] = 'matt'
-        c['ref_id'] = '1243'
-        yield c
+        count = ret['total']
+        logging.debug("found %d comments" % count)
+        if count == 0:
+            logging.debug("no comments found for %s" % self.key)
+            return
+
+        for comment in ret['comments']:
+            c = CommentEvent('comment')
+            c['diggs'] = comment['up']
+            c['buries'] = comment['down']
+            c['body'] = comment['content']
+            c['author'] = comment['icon']
+            c['ref_id'] = comment['id']
+            c['activity_created'] = datetime.utcfromtimestamp(comment['date'])
+            # TODO: need to create relation outside of provider
+            #c['reply_to'] = 'digg:%s' % comment['reply_to']
+            yield c
 
 class CommentEvent(abstract.Event):
 
     def get_key(self):
-        return self['ref_id']
+        return ':'.join(['digg', self['ref_id']])
