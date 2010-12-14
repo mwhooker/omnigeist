@@ -1,0 +1,24 @@
+Data Model
+
+
+epos (words) - record of activity (property, url)
+    UserActivity - an atom of activity on the epos
+
+
+API
+
+    Open Questions
+        * different features of the API? Top, most recent?
+        * How do we update, say, diggs on comments? seems hard to do incrementally.
+            will probably have to insert/update for each one
+
+    APIs
+        * activity
+            params:
+                limit
+                cursor (?)
+                order by [asc, desc]
+                sort by [top, recent]
+        * discover (name?)
+            links to property permalinks
+            top level stats
