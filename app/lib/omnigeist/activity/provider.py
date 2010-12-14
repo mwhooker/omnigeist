@@ -1,9 +1,20 @@
 import logging
+import httplib2
 from datetime import datetime
 
 from digg.api import Digg, Digg2
 
 from omnigeist.activity import abstract
+from omnigeist.http_util import MemcacheFileAdapter
+
+class RedditProvider(abstract.Activity):
+
+    def __init__(self, url):
+        super(RedditProvider, self).__init__(url)
+        self.h = httplib2.Http(cache=MemcacheFileAdapter('shorturl'))
+
+    def events(self, start_date):
+        pass
 
 class DiggProvider(abstract.Activity):
 
