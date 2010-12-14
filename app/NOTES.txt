@@ -22,3 +22,7 @@ API
         * discover (name?)
             links to property permalinks
             top level stats
+
+
+TODO:
+    should probably just move model access to the providers

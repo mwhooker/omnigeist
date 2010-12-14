@@ -27,9 +27,5 @@ class Event(dict):
     def __init__(self, kind):
         self['kind'] = kind
 
-    @property
-    def model(self):
-        raise NotImplementedError
-
     def get_key(self):
         raise NotImplementedError

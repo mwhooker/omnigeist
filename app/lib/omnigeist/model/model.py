@@ -18,7 +18,6 @@ class UserActivity(polymodel.PolyModel):
     activity_created = db.DateTimeProperty()
     created_on = db.DateTimeProperty(auto_now_add=True)
     updated_on = db.DateTimeProperty(auto_now=True)
-    #epos = db.ReferenceProperty(Epos)
 
 class UserComment(UserActivity):
     reply_to = db.SelfReferenceProperty()
@@ -31,11 +30,3 @@ class DiggUserComment(UserComment):
 
 def activity_factory(event_kind):
     return DiggUserComment
-
-
-"""
-def activity_from_event(event):
-    if not isinstance(event, activity.Event):
-        raise ValueError('event must be of type activity.Event')
-    model_klass = activity_factory(event.kind)
-"""
