@@ -1,38 +1,15 @@
-import urlparse
 import logging
 
-import shorturl
 from google.appengine.ext import db
 
 from omnigeist.activity import provider
 from omnigeist.model import model
+from omnigeist import http_util
 
 activity_map = {'digg': 'DiggProvider'}
 
-def canonicalize_url(url):
-    """Canoninicalize urls
-
-    >>> canonicalize_url('hTTP://EN.WIKIPEDIA.ORG:80/wiki/Time_Warner?x=1&y=2#frag')
-    http://en.wikipedia.org/wiki/Time_Warner?x=1&y=2
-    >>> canonicalize_url('http://localhost:8080')
-    http://localhost:8080
-    """
-
-    url = shorturl.resolve(url)
-    # trim off fragment
-    scheme, netloc, path, query, _ = urlparse.urlsplit(url)
-
-    # lowercase scheme and netloc
-    scheme, netloc = map(unicode.lower, [scheme, netloc])
-
-    #remove default port if exists
-    if netloc[-3:] == ':80':
-        netloc = netloc[:-3]
-
-    return urlparse.urlunsplit((scheme, netloc, path, query, None))
-
 def fanout(url):
-    c_url = canonicalize_url(url)
+    c_url = http_util.canonicalize_url(url)
     logging.debug("canonicalizing url: %s" % c_url)
     for host in activity_map:
         klass = getattr(provider, activity_map[host])

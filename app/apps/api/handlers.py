@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
-import shorturl
+
 from tipfy import RequestHandler, Response, render_json_response
+
 from omnigeist import fanout
+from omnigeist import http_util
 
 
 class OmniApiHandler(RequestHandler):
@@ -16,6 +18,6 @@ class OmniApiHandler(RequestHandler):
 class ResolveShortUrlHandler(RequestHandler):
     def get(self):
         """Simply returns a Response object with an enigmatic salutation."""
-        r = {'location': shorturl.resolve(self.request.args['url'])}
+        r = {'location': http_util.resolve_shorturl(self.request.args['url'])}
         logging.debug(r)
         return render_json_response(r)
