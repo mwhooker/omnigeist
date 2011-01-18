@@ -9,6 +9,7 @@ class Epos(db.Expando):
     # The resource we're tracking
     url = db.LinkProperty()
     ref_id = db.StringProperty()
+    author = db.StringProperty()
     created_on = db.DateTimeProperty(auto_now_add=True)
     updated_on = db.DateTimeProperty(auto_now=True)
 

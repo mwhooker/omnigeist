@@ -11,8 +11,11 @@ activity_map = {'digg': 'DiggProvider'}
 def fanout(url):
     c_url = http_util.canonicalize_url(url)
     logging.debug("canonicalizing url: %s" % c_url)
-    #digg_provider = provider.DiggProvider(c_url)
-    #digg_provider.update_events(digg_provider.last_updated)
+    try:
+        digg_provider = provider.DiggProvider(c_url)
+        digg_provider.update_events(digg_provider.last_updated)
+    except:
+        pass
     reddit_provider = provider.RedditProvider(c_url)
     reddit_provider.update_events(reddit_provider.last_updated)
     """

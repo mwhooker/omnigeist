@@ -17,7 +17,7 @@ from omnigeist.http_util import MemcacheFileAdapter
 
 
 class RedditProvider(abstract.Activity):
-    REDDIT_URL = 'http://reddit.com'
+    REDDIT_URL = 'http://www.reddit.com'
 
     """
     TODO:
@@ -28,7 +28,7 @@ class RedditProvider(abstract.Activity):
     """
 
     def __init__(self, c_url):
-        self.epos = self._get_or_create_epos(c_url, 'reddit')
+        self.eposi = {}
         self.h = httplib2.Http(cache=MemcacheFileAdapter('shorturl'))
 
         info_url = '%s/api/info.json?%s' % (self.REDDIT_URL, 
@@ -39,41 +39,61 @@ class RedditProvider(abstract.Activity):
             raise Exception("error fetching %s" % info_url)
         content = json.loads(content)
 
-        #todo make this a dict comprehension
-        self.epos.subreddits = [{'subreddit': subr['data']['subreddit'],
-                                 'permalink': subr['data']['permalink'],
-                                 'title': subr['data']['title'],
-                                 'ups': subr['data']['ups'],
-                                 'downs': subr['data']['downs']}
-                                for subr in content['data']['children']]
+        # TODO: don't want to be updated epos every time this is instantiated.
+        #        Perhaps have initialization be a part of get_or_create...
+        for subr in content['data']['children']:
+            epos = self._get_or_create_epos(c_url, subr['data']['subreddit'])
+            epos.subreddit = subr['data']['subreddit']
+            epos.permalink = "%s%s" % (self.REDDIT_URL, subr['data']['permalink'])
+            epos.title = subr['data']['title']
+            epos.ups = subr['data']['ups']
+            epos.downs = subr['data']['downs']
+            epos.ref_id = subr['data']['id']
+            epos.submitted_on = datetime.utcfromtimestamp(subr['data']['created_utc'])
+            epos.author = subr['data']['author']
+            epos.put()
+            self.eposi[subr['data']['subreddit']] = epos
+
 
         # http://www.reddit.com/api/info.json?count=1&url=http://voices.washingtonpost.com/blog-post/2010/12/openleaks_launches_rivals_wiki.html
 
     def update_events(self, start_date):
-        for subr in self.epos.subreddits:
-            info_url = '%s%s.json' % (self.REDDIT_URL, subr['permalink'][:-1])
+        """
+
+        TODO:
+            only update events since start_date.
+            resolve (in|ex)clusive ambiguity in name
+        """
+
+        for epos in self.eposi:
+            info_url = "%s.json" % self.eposi[epos].permalink[:-1]
             resp, content = self.h.request(info_url)
-            content = json.loads(content)
-            logging.info("loading comments from %s" % subr['permalink'])
+
+            try:
+                content = json.loads(content)
+            except json.JSONDecodeError, e:
+                logging.debug("error loading %s -> %s" % (info_url, content))
+                continue
+            logging.info("loading comments from %s" % self.eposi[epos].permalink)
 
             def _process_node(node):
-                    created_on = datetime.utcfromtimestamp(node['created_utc'])
-                    key = '_'.join(['reddit', 'comment', node['id']])
-                    c = models.RedditUserComment.get_or_insert(key_name=key,
-                                                               parent=self.epos,
-                                                               ref_id=node['id'],
-                                                               activity_created=created_on)
-                    parent_key = '_'.join(['reddit', 'comment', node['parent_id'].split('_')[1]])
-                    c.ups = node['ups']
-                    c.downs = node['downs']
-                    if node['parent_id'] != node['link_id']:
-                        c.reply_to = db.Key.from_path(models.RedditUserComment.kind(),
-                                                      parent_key,
-                                                      parent=self.epos.key())
+                created_on = datetime.utcfromtimestamp(node['created_utc'])
+                key = '_'.join(['reddit', 'comment', node['id']])
+                c = models.RedditUserComment.get_or_insert(key_name=key,
+                                                           parent=self.eposi[epos],
+                                                           ref_id=node['id'],
+                                                           activity_created=created_on)
+                parent_key = '_'.join(['reddit', 'comment', node['parent_id'].split('_')[1]])
+                c.ups = node['ups']
+                c.downs = node['downs']
+                if node['parent_id'] != node['link_id']:
+                    c.reply_to = db.Key.from_path(models.RedditUserComment.kind(),
+                                                  parent_key,
+                                                  parent=self.eposi[epos].key())
                     c.body = node['body']
                     c.author = node['author']
                     c.put()
-            
+
             def _load_activity(children):
                 """Operates on structures which look like this...
                 {u'data': {                           // top level obj holding comments
@@ -105,7 +125,6 @@ class RedditProvider(abstract.Activity):
                 """
 
                 if children['kind'] == 'Listing':
-                    logging.info("found %d children" % len(children['data']['children']))
                     for child in children['data']['children']:
                         _load_activity(child)
                 elif children['kind'] == 't1':
@@ -115,18 +134,28 @@ class RedditProvider(abstract.Activity):
 
             _load_activity(content[1])
 
+    @property
+    def last_updated(self):
+        return max(self.eposi, key=lambda x: self.eposi[x].updated_on)
+
+    def _get_or_create_epos(self, target_url, subreddit):
+        key = '_'.join(['reddit', target_url, subreddit])
+        epos = models.Epos.get_or_insert(key_name=key,
+                                         url=db.Link(target_url),
+                                         host='reddit')
+        return epos
+
 
 class DiggProvider(abstract.Activity):
     host = 'digg'
 
 
     def __init__(self, c_url):
-        self.epos = self._get_or_create_epos(c_url, 'digg')
+        self.epos = self._get_or_create_epos(c_url)
         digg_handle = Digg2()
 
         link = ",".join([self.epos.url])
         info = digg_handle.story.getInfo(links=link)
-        logging.debug(info)
 
         if info['count'] == 0:
             raise abstract.NoActivityException()
@@ -162,6 +191,23 @@ class DiggProvider(abstract.Activity):
             c.body = comment['content']
             c.author = comment['icon']
             #c.relative_rank = 0
+            if comment['reply_to']:
+                parent_key = '_'.join(['digg', 'comment', comment['reply_to']])
+                c.reply_to = db.Key.from_path(models.DiggUserComment.kind(),
+                                              parent_key,
+                                              parent=self.epos.key())
+
+
             c.put()
-            # TODO: need to create relation outside of provider
-            #c['reply_to'] = 'digg:%s' % comment['reply_to']
+
+    def _get_or_create_epos(self, target_url):
+        # TODO: validate that host exists
+        key = '_'.join(['digg', target_url])
+        epos = models.Epos.get_or_insert(key_name=key,
+                                         url=db.Link(target_url),
+                                         host='digg')
+        return epos
+
+    @property
+    def last_updated(self):
+        return self.epos.updated_on
