@@ -5,7 +5,7 @@ from google.appengine.ext.db import polymodel
 class Epos(db.Expando):
     """Root record of activity for a property-url"""
 
-    host = db.StringProperty(required=True, choices=set(['digg', 'twitter']))
+    host = db.StringProperty(required=True, choices=set(['digg', 'twitter', 'reddit']))
     # The resource we're tracking
     url = db.LinkProperty()
     ref_id = db.StringProperty()
@@ -18,6 +18,7 @@ class UserActivity(polymodel.PolyModel):
     activity_created = db.DateTimeProperty()
     created_on = db.DateTimeProperty(auto_now_add=True)
     updated_on = db.DateTimeProperty(auto_now=True)
+    relative_rank = db.IntegerProperty()
 
 class UserComment(UserActivity):
     reply_to = db.SelfReferenceProperty()
@@ -27,6 +28,6 @@ class DiggUserComment(UserComment):
     diggs = db.IntegerProperty()
     buries = db.IntegerProperty()
 
-
-def activity_factory(event_kind):
-    return DiggUserComment
+class RedditUserComment(UserComment):
+    ups = db.IntegerProperty()
+    downs = db.IntegerProperty()

@@ -1,4 +1,6 @@
-from omnigeist.model import model
+from omnigeist import models
+
+from google.appengine.ext import db
 
 
 class ActivityException(Exception): pass
@@ -9,23 +11,18 @@ class NoActivityException(ActivityException): pass
 class Activity(object):
 
 
-    def __init__(self, url):
-        self.url = url
-
-    def _create_epos(self):
+    def update_events(self, last_updated):
         raise NotImplementedError
 
-    def write_events(self):
-        raise NotImplementedError
+    @property
+    def last_updated(self):
+        return self.epos.updated_on
 
-    def get_key(self):
-        return '_'.join([self.__class__.__name__, self.url])
-
-
-class Event(dict):
-
-    def __init__(self, kind):
-        self['kind'] = kind
-
-    def get_key(self):
-        raise NotImplementedError
+    @staticmethod
+    def _get_or_create_epos(url, host):
+        # TODO: validate that host exists
+        key = '_'.join(['epos', host, url])
+        epos = models.Epos.get_or_insert(key_name=key,
+                                         url=db.Link(url),
+                                         host=host)
+        return epos
