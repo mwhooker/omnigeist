@@ -19,15 +19,16 @@ class UserActivity(polymodel.PolyModel):
     activity_created = db.DateTimeProperty()
     created_on = db.DateTimeProperty(auto_now_add=True)
     updated_on = db.DateTimeProperty(auto_now=True)
-    relative_rank = db.IntegerProperty()
 
 class UserComment(UserActivity):
     reply_to = db.SelfReferenceProperty()
     body = db.TextProperty()
 
 class DiggUserComment(UserComment):
+    # up - down, usually
     diggs = db.IntegerProperty()
-    buries = db.IntegerProperty()
+    up = db.IntegerProperty()
+    down = db.IntegerProperty()
 
 class RedditUserComment(UserComment):
     ups = db.IntegerProperty()

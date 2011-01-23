@@ -2,7 +2,7 @@ import logging
 
 from google.appengine.ext import db
 
-from omnigeist.activity import provider
+from omnigeist import activity
 from omnigeist import models
 from omnigeist import http_util
 
@@ -11,13 +11,19 @@ activity_map = {'digg': 'DiggProvider'}
 def fanout(url):
     c_url = http_util.canonicalize_url(url)
     logging.debug("canonicalizing url: %s" % c_url)
-    try:
-        digg_provider = provider.DiggProvider(c_url)
-        digg_provider.update_events(digg_provider.last_updated)
-    except:
-        pass
-    reddit_provider = provider.RedditProvider(c_url)
-    reddit_provider.update_events(reddit_provider.last_updated)
+    providers = [activity.DiggProvider,
+                 activity.RedditProvider]
+    for provider in providers:
+        try:
+            pobj = provider(c_url)
+            pobj.update_events(pobj.last_updated)
+        except activity.NoActivityException, e:
+            logging.debug("no activity for provider %s, url %s" % (
+                provider.__class__, c_url))
+        except Exception, e:
+            logging.error("failed updating events for provider %s, url %s."
+                          "encountered exception %s: %s" % (
+                              provider, c_url, type(e), e))
     """
     for host in activity_map:
         klass = getattr(provider, activity_map[host])

@@ -11,12 +11,23 @@ except ImportError:
 from digg.api import Digg, Digg2
 from google.appengine.ext import db
 
-from omnigeist.activity import abstract
 from omnigeist import models
 from omnigeist.http_util import MemcacheFileAdapter
 
 
-class RedditProvider(abstract.Activity):
+class Activity(object):
+
+    def update_events(self, last_updated):
+        raise NotImplementedError
+
+
+class ActivityException(Exception): pass
+
+
+class NoActivityException(ActivityException): pass
+
+        
+class RedditProvider(Activity):
     REDDIT_URL = 'http://www.reddit.com'
 
     """
@@ -39,8 +50,6 @@ class RedditProvider(abstract.Activity):
             raise Exception("error fetching %s" % info_url)
         content = json.loads(content)
 
-        # TODO: don't want to be updated epos every time this is instantiated.
-        #        Perhaps have initialization be a part of get_or_create...
         for subr in content['data']['children']:
             epos = self._get_or_create_epos(c_url, subr['data']['subreddit'])
             epos.subreddit = subr['data']['subreddit']
@@ -95,35 +104,6 @@ class RedditProvider(abstract.Activity):
                     c.put()
 
             def _load_activity(children):
-                """Operates on structures which look like this...
-                {u'data': {                           // top level obj holding comments
-                    u'after': None,
-                    u'before': None,
-                    u'kind': 'Listing',
-                    u'children': [{
-                        u'data': {
-                            ...                        // comment info
-                            u'kind': u't1',
-                            u'replies': {
-                                u'data': {
-                                    u'after': None,
-                                    u'before': None,
-                                    u'children': [{
-                                        u'data': {
-                                            ...         // comment info
-                                        },
-                                        ...             // more replies
-                                        ]
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    ...                             // more top level comment
-                    ]} 
-                }
-                """
-
                 if children['kind'] == 'Listing':
                     for child in children['data']['children']:
                         _load_activity(child)
@@ -146,7 +126,7 @@ class RedditProvider(abstract.Activity):
         return epos
 
 
-class DiggProvider(abstract.Activity):
+class DiggProvider(Activity):
     host = 'digg'
 
 
@@ -158,7 +138,7 @@ class DiggProvider(abstract.Activity):
         info = digg_handle.story.getInfo(links=link)
 
         if info['count'] == 0:
-            raise abstract.NoActivityException()
+            raise NoActivityException()
 
         story = info['stories'][0]
         self.story_id = self.epos.ref_id = story['story_id']
@@ -169,7 +149,7 @@ class DiggProvider(abstract.Activity):
 
     def update_events(self, start_date):
         #TODO: Digg2 api broken for comments
-        digg_handle = Digg()
+        digg_handle = Digg2()
         ret = digg_handle.story.getComments(story_id=self.story_id)
 
         count = ret['total']
@@ -186,13 +166,13 @@ class DiggProvider(abstract.Activity):
                                                      ref_id=ref_id,
                                                      activity_created=datetime.utcfromtimestamp(comment['date']))
             c.ref_id = ref_id
-            c.diggs = comment['up']
-            c.buries = comment['down']
-            c.body = comment['content']
-            c.author = comment['icon']
-            #c.relative_rank = 0
-            if comment['reply_to']:
-                parent_key = '_'.join(['digg', 'comment', comment['reply_to']])
+            c.up = comment['up']
+            c.down = comment['down']
+            c.diggs = comment['diggs']
+            c.body = comment['text']
+            c.author = comment['user']['username']
+            if comment['parent_id']:
+                parent_key = '_'.join(['digg', 'comment', comment['parent_id']])
                 c.reply_to = db.Key.from_path(models.DiggUserComment.kind(),
                                               parent_key,
                                               parent=self.epos.key())
