@@ -14,6 +14,7 @@ class Epos(db.Expando):
     updated_on = db.DateTimeProperty(auto_now=True)
 
 class UserActivity(polymodel.PolyModel):
+    url = db.LinkProperty()
     ref_id = db.StringProperty(required=True)
     author = db.StringProperty()
     activity_created = db.DateTimeProperty()
@@ -21,6 +22,7 @@ class UserActivity(polymodel.PolyModel):
     updated_on = db.DateTimeProperty(auto_now=True)
 
 class UserComment(UserActivity):
+    rank = db.IntegerProperty()
     reply_to = db.SelfReferenceProperty()
     body = db.TextProperty()
 
@@ -33,3 +35,19 @@ class DiggUserComment(UserComment):
 class RedditUserComment(UserComment):
     ups = db.IntegerProperty()
     downs = db.IntegerProperty()
+
+def _get_top_reddit_comment(url, idx=1):
+    query = RedditUserComment.gql("WHERE url = :url AND reply_to = NULL ORDER BY rank DESC",
+                                  url=url)
+    res = query.fetch(1, idx-1)
+    if not len(res):
+        return None
+    return res[0]
+
+def _get_top_digg_comment(url, idx=1):
+    query = DiggUserComment.gql("WHERE url = :url AND reply_to = NULL ORDER BY rank DESC",
+                                url=url)
+    res = query.fetch(1, idx-1)
+    if not len(res):
+        return None
+    return res[0]

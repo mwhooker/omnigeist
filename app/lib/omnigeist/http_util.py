@@ -34,7 +34,7 @@ def canonicalize_url(url):
     http://localhost:8080
     """
 
-    url = resolve_shorturl(url)
+    url = resolve_shorturl(url).decode('utf-8')
     # trim off fragment
     scheme, netloc, path, query, _ = urlparse.urlsplit(url)
 
@@ -54,7 +54,7 @@ def resolve_shorturl(url):
     headers = { 'User-Agent' : USER_AGENT }
 
     try:
-        resp, _ = h.request(url, "HEAD")
+        resp, _ = h.request(url, "HEAD", redirections=10)
     except httplib2.HttpLib2Error, e:
         raise ResolveException(e)
 

@@ -24,6 +24,7 @@ def fanout(url):
             logging.error("failed updating events for provider %s, url %s."
                           "encountered exception %s: %s" % (
                               provider, c_url, type(e), e))
+            raise
     """
     for host in activity_map:
         klass = getattr(provider, activity_map[host])

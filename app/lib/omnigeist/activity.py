@@ -39,12 +39,13 @@ class RedditProvider(Activity):
     """
 
     def __init__(self, c_url):
+        self.url = c_url
         self.eposi = {}
+        # no caching because reddit sucks at http
         self.h = httplib2.Http(cache=MemcacheFileAdapter('shorturl'))
 
-        info_url = '%s/api/info.json?%s' % (self.REDDIT_URL, 
-                                            urllib.urlencode({'count': '1',
-                                                              'url': c_url}))
+        info_url = '%s/api/info.json?count=1&url=%s' % (self.REDDIT_URL, c_url)
+
         resp, content = self.h.request(info_url)
         if resp.status > 299:
             raise Exception("error fetching %s" % info_url)
@@ -75,7 +76,7 @@ class RedditProvider(Activity):
         """
 
         for epos in self.eposi:
-            info_url = "%s.json" % self.eposi[epos].permalink[:-1]
+            info_url = "%s.json" % self.eposi[epos].permalink
             resp, content = self.h.request(info_url)
 
             try:
@@ -91,17 +92,19 @@ class RedditProvider(Activity):
                 c = models.RedditUserComment.get_or_insert(key_name=key,
                                                            parent=self.eposi[epos],
                                                            ref_id=node['id'],
+                                                           url=self.url,
                                                            activity_created=created_on)
                 parent_key = '_'.join(['reddit', 'comment', node['parent_id'].split('_')[1]])
+                c.rank = int(node['ups']) - int(node['downs'])
                 c.ups = node['ups']
                 c.downs = node['downs']
                 if node['parent_id'] != node['link_id']:
                     c.reply_to = db.Key.from_path(models.RedditUserComment.kind(),
                                                   parent_key,
                                                   parent=self.eposi[epos].key())
-                    c.body = node['body']
-                    c.author = node['author']
-                    c.put()
+                c.body = node['body']
+                c.author = node['author']
+                c.put()
 
             def _load_activity(children):
                 if children['kind'] == 'Listing':
@@ -116,6 +119,8 @@ class RedditProvider(Activity):
 
     @property
     def last_updated(self):
+        if not len(self.eposi):
+            return None
         return max(self.eposi, key=lambda x: self.eposi[x].updated_on)
 
     def _get_or_create_epos(self, target_url, subreddit):
@@ -131,6 +136,7 @@ class DiggProvider(Activity):
 
 
     def __init__(self, c_url):
+        self.url = c_url
         self.epos = self._get_or_create_epos(c_url)
         digg_handle = Digg2()
 
@@ -152,23 +158,27 @@ class DiggProvider(Activity):
         digg_handle = Digg2()
         ret = digg_handle.story.getComments(story_id=self.story_id)
 
-        count = ret['total']
+        count = ret['count']
         logging.debug("found %d comments" % count)
         if count == 0:
             logging.debug("no comments found for %s" % self.key)
             return
 
         for comment in ret['comments']:
-            ref_id = comment['id']
+            ref_id = comment['comment_id']
             key = '_'.join(['digg', 'comment', ref_id])
-            c = models.DiggUserComment.get_or_insert(key_name=key,
-                                                     parent=self.epos,
-                                                     ref_id=ref_id,
-                                                     activity_created=datetime.utcfromtimestamp(comment['date']))
+            c = models.DiggUserComment.\
+                    get_or_insert(key_name=key,
+                                  parent=self.epos,
+                                  ref_id=ref_id,
+                                  url=self.url,
+                                  activity_created=datetime.utcfromtimestamp(
+                                      comment['date_created']))
             c.ref_id = ref_id
             c.up = comment['up']
             c.down = comment['down']
             c.diggs = comment['diggs']
+            c.rank = int(comment['diggs'])
             c.body = comment['text']
             c.author = comment['user']['username']
             if comment['parent_id']:
