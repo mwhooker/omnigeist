@@ -1,6 +1,8 @@
 #omnigeist {
-    height: 150px;
-    width: 700px;
+    width: 25%;
+    height: 100%;
+    top: 0px;
+    left: 0px;
     position: fixed;
     
     background-color: #000;
@@ -9,38 +11,20 @@
     -khtml-opacity: 0.90;
     opacity: 0.90;
     -moz-bordera-top-right-radius: 10px;
-    -moz-bordera-top-left-radius: 10px;
-    border-top-left-radius: 10px;
+    -moz-bordera-bottom-right-radius: 10px;
     border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
     z-index: 1000;
-
-
-
-
-    font-size: small;
-    font-family: Verdana, Geneva, sans-serif;
-    color: #74BBFB;
-    background-color: #000;
-    text-align: left;
-    /*line-height: 1.2em;
-    letter-spacing: 1px;
-    word-spacing: 1px;
-    */
 }
-
 .omnigeist {
 }
     .omnigeist p {
         font-size: small;
         font-family: Verdana, Geneva, sans-serif;
-        color: #74BBFB;
-        background-color: #000;
+        color: #FFFFFF;
         text-align: left;
-        line-height: 1.2em;
+        /*line-height: 1.2em;
         letter-spacing: 1px;
         word-spacing: 1px;
+        */
     }
-
-#omnigeist-spacer {
-    height: 150px;
-}
