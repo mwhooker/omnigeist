@@ -17,7 +17,7 @@ class MainApiHandler(RequestHandler):
 
 
 class TopApiHandler(RequestHandler):
-    def get(self):
+    def get(self, format):
         providers = ('digg', 'reddit')
         if self.request.args.get('provider') not in providers\
            or 'url' not in self.request.args:
@@ -46,7 +46,16 @@ class TopApiHandler(RequestHandler):
 
         for attr in ('author', 'created_on', 'body'):
             resp[attr] = str(top.__getattribute__(attr))
-        return Response(json.dumps(resp))
+
+        if format == 'js':
+            callback = self.request.args.get('callback')
+            if not callback:
+                return Response(status=401)
+            response = Response("%s(%s);" % ( callback, json.dumps(resp)))
+            response.headers['Content-Type'] = 'text/javascript'
+            return response
+        elif format == 'json':
+            return render_json_response(resp)
 
 
 class ResolveShortUrlHandler(RequestHandler):

@@ -20,9 +20,7 @@ def get_rules(app):
         A list of class:`tipfy.Rule` instances.
     """
     rules = [
-        Rule('/', endpoint='omni', handler='apps.api.handlers.MainApiHandler'),
-        Rule('/top.<any(js, json):format>', endpoint='top-comments', handler='apps.api.handlers.TopApiHandler'),
-        Rule('/shorturl/resolve', endpoint='resolve-shorturl', handler='apps.api.handlers.ResolveShortUrlHandler'),
+        Rule('/js/bookmarklet.js', endpoint='omni', handler='apps.web.handlers.BookmarkletWebHandler'),
     ]
 
     return rules

@@ -18,5 +18,11 @@ config['tipfy'] = {
     ],
     'apps_installed': [
         'apps.api',
+        'apps.web',
     ],
+}
+
+config['web'] = {
+    'host': 'http://localhost:8084',
+    'jinja.caching': True
 }

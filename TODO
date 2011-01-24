@@ -3,5 +3,8 @@ In loose order of priority:
 
 * Come up with a way to rank comments. Which are most informative? For now, just use most dugg/upvoted, etc.
 * memcache results of /top
-* check if updated within TTL. If not, send message to fetch. How do we account for duplicate requests?
+* check if updated within TTL. If not, send message to fetch.
+    * How do we account for duplicate requests?
+    * will need to check for errors more carefully
 * How many times, or what logic should I use to redirect? nytimes brings me to login page. maybe only follow 301s
+* Probably use bookmarklet to display comments. Need to make bookmarklet compiler. Figure out when in the dev cycle this should be run
