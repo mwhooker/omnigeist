@@ -1,6 +1,7 @@
 /*
  * TODO:
  *  namespace this file. i.e. put it in a function
+ *  check if jquery is on the page already
  */
 omni_height = 150;
 omni_width = 700;
