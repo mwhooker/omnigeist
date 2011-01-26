@@ -48,7 +48,7 @@ class RedditProvider(Activity):
 
         resp, content = self.h.request(info_url)
         if resp.status > 299:
-            raise Exception("error fetching %s" % info_url)
+            raise ActivityException("error fetching %s" % info_url)
         content = json.loads(content)
 
         for subr in content['data']['children']:

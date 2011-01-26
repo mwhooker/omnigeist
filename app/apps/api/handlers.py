@@ -1,23 +1,48 @@
 # -*- coding: utf-8 -*-
 import logging
+import time
+import hashlib
 import simplejson as json
 
+from google.appengine.api import memcache
+from google.appengine.api import taskqueue
+
 from tipfy import RequestHandler, Response, render_json_response
-from tipfy.ext.wtforms import validators
 
 from omnigeist import fanout
 from omnigeist import http_util
 from omnigeist import models
 
 
-class MainApiHandler(RequestHandler):
+class FanoutApiHandler(RequestHandler):
     def get(self):
+        url = self.request.args.get('url')
+        if not url:
+            self.abort(400)
+        c_url = http_util.canonicalize_url(url)
+        fanout.fanout(c_url)
+        return Response()
+
+    def post(self):
         logging.debug("fanout")
-        fanout.fanout(self.request.args['url'])
-        return Response("OK")
+        url = self.request.form.get('url')
+        if not url:
+            self.abort(400)
+        c_url = http_util.canonicalize_url(url)
+
+        #only call fanout once
+        key = '_'.join(['task_fanout', url])
+        mcd = memcache.Client()
+        lock = mcd.add(key, True, 60*60)
+        if lock:
+            fanout.fanout(c_url)
+            mcd.delete(key)
+
+        return Response()
 
 
 class TopApiHandler(RequestHandler):
+
     def get(self, format):
         providers = ('digg', 'reddit')
         if self.request.args.get('provider') not in providers\
@@ -34,23 +59,45 @@ class TopApiHandler(RequestHandler):
         if idx < 1:
             idx = 1
         
-        resp = {}
-        if provider == 'digg':
-            top = models._get_top_digg_comment(url, idx)
-            if not top:
-                self.abort(404)
-            resp['diggs'] = top.diggs
-            resp['up'] = top.up
-            resp['buries'] = top.down
-        elif provider == 'reddit':
-            top = models._get_top_reddit_comment(url, idx)
-            if not top:
-                self.abort(404)
-            resp['ups'] = top.ups
-            resp['down'] = top.downs
+        mcd = memcache.Client()
 
-        for attr in ('author', 'created_on', 'body'):
-            resp[attr] = str(top.__getattribute__(attr))
+        def _load_top():
+            resp_cache_key = '_'.join(['cache_top', url])
+            resp = mcd.get(resp_cache_key)
+            resp = {}
+            if provider == 'digg':
+                top = models._get_top_digg_comment(url, idx)
+                if top:
+                    resp['diggs'] = top.diggs
+                    resp['up'] = top.up
+                    resp['buries'] = top.down
+            elif provider == 'reddit':
+                top = models._get_top_reddit_comment(url, idx)
+                if top:
+                    resp['ups'] = top.ups
+                    resp['down'] = top.downs
+
+            if top:
+                for attr in ('author', 'created_on', 'body'):
+                    resp[attr] = str(top.__getattribute__(attr))
+
+            if len(resp):
+                mcd.set(resp_cache_key, resp, 60*15)
+                return resp
+            else:
+                return False
+
+        # check data for freshness
+        freshness_key = '_'.join(['url_fresh', url])
+        if mcd.add(freshness_key, True, 60*60):
+            # add to task queue. immediately continue
+            taskqueue.add(url='/fanout', name=hashlib.md5(url).hexdigest(),
+                          queue_name='fanout-queue', params={'url': url})
+
+        resp = _load_top()
+        # No data from the db
+        if not resp:
+            self.abort(404)
 
         if format == 'js':
             callback = self.request.args.get('callback')

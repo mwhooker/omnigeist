@@ -4,12 +4,10 @@ from google.appengine.ext import db
 
 from omnigeist import activity
 from omnigeist import models
-from omnigeist import http_util
 
 activity_map = {'digg': 'DiggProvider'}
 
-def fanout(url):
-    c_url = http_util.canonicalize_url(url)
+def fanout(c_url):
     logging.debug("canonicalizing url: %s" % c_url)
     providers = [activity.DiggProvider,
                  activity.RedditProvider]
@@ -20,11 +18,13 @@ def fanout(url):
         except activity.NoActivityException, e:
             logging.debug("no activity for provider %s, url %s" % (
                 provider.__class__, c_url))
+        except activity.ActivityException, e:
+            logging.debug("problem fetching activity for %s. url %s" % (
+                provider.__class__.__name__, c_url))
         except Exception, e:
             logging.error("failed updating events for provider %s, url %s."
                           "encountered exception %s: %s" % (
                               provider, c_url, type(e), e))
-            raise
     """
     for host in activity_map:
         klass = getattr(provider, activity_map[host])

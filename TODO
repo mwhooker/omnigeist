@@ -1,10 +1,13 @@
 In loose order of priority:
 
 
-* Come up with a way to rank comments. Which are most informative? For now, just use most dugg/upvoted, etc.
-* memcache results of /top
-* check if updated within TTL. If not, send message to fetch.
-    * How do we account for duplicate requests?
-    * will need to check for errors more carefully
+* figure out how to poll taskqueue so we can keep client connection open (channels) while we fetch the result the first time
+* return fat json result. i.e. 100 comments from each provider. 
+    look at url structure like:
+        /top?url=
+        /top/[digg, reddit]?url=
+        params:
+            pagination of some sort.
 * How many times, or what logic should I use to redirect? nytimes brings me to login page. maybe only follow 301s
 * use buildout to do string replacement on js templates. also minify
+* Come up with a way to rank comments. Which are most informative? For now, just use most dugg/upvoted, etc.
