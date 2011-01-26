@@ -38,12 +38,9 @@ class FanoutApiHandler(RequestHandler):
 class TopApiHandler(RequestHandler):
 
     def get(self, format):
-        providers = ('digg', 'reddit')
-        if self.request.args.get('provider') not in providers\
-           or 'url' not in self.request.args:
+        if 'url' not in self.request.args:
             self.abort(400)
 
-        provider = self.request.args['provider']
         url = http_util.canonicalize_url(self.request.args['url'])
 
         try:
@@ -58,22 +55,34 @@ class TopApiHandler(RequestHandler):
         def _load_top():
             resp_cache_key = '_'.join(['cache_top', url])
             resp = mcd.get(resp_cache_key)
-            resp = {}
-            if provider == 'digg':
-                top = models._get_top_digg_comment(url, idx)
-                if top:
-                    resp['diggs'] = top.diggs
-                    resp['up'] = top.up
-                    resp['buries'] = top.down
-            elif provider == 'reddit':
-                top = models._get_top_reddit_comment(url, idx)
-                if top:
-                    resp['ups'] = top.ups
-                    resp['down'] = top.downs
+            if resp:
+                return resp
+            else:
+                resp = {}
 
+            top = models._get_top_digg_comment(url, idx)
             if top:
-                for attr in ('author', 'created_on', 'body'):
-                    resp[attr] = str(top.__getattribute__(attr))
+                diggs = []
+                for i in top:
+                    digg = {}
+                    digg['diggs'] = i.diggs
+                    digg['up'] = i.up
+                    digg['buries'] = i.down
+                    for attr in ('author', 'created_on', 'body'):
+                        digg[attr] = str(i.__getattribute__(attr))
+                    diggs.append(digg)
+                resp['digg'] = diggs
+            top = models._get_top_reddit_comment(url, idx)
+            if top:
+                reddits = []
+                for i in top:
+                    reddit = {}
+                    reddit['ups'] = i.ups
+                    reddit['down'] = i.downs
+                    for attr in ('author', 'created_on', 'body'):
+                        reddit[attr] = str(i.__getattribute__(attr))
+                    reddits.append(reddit)
+                resp['reddit'] = reddits
 
             if len(resp):
                 mcd.set(resp_cache_key, resp, 60*15)

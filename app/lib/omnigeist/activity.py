@@ -102,6 +102,7 @@ class RedditProvider(Activity):
                     c.reply_to = db.Key.from_path(models.RedditUserComment.kind(),
                                                   parent_key,
                                                   parent=self.eposi[epos].key())
+                # TODO: make sure this is unicode
                 c.body = node['body']
                 c.author = node['author']
                 c.put()

@@ -36,18 +36,21 @@ class RedditUserComment(UserComment):
     ups = db.IntegerProperty()
     downs = db.IntegerProperty()
 
+#activity per page
+APP = 20
+
 def _get_top_reddit_comment(url, idx=1):
     query = RedditUserComment.gql("WHERE url = :url AND reply_to = NULL ORDER BY rank DESC",
                                   url=url)
-    res = query.fetch(1, idx-1)
+    res = query.fetch(APP, APP*(idx-1))
     if not len(res):
         return None
-    return res[0]
+    return res
 
 def _get_top_digg_comment(url, idx=1):
     query = DiggUserComment.gql("WHERE url = :url AND reply_to = NULL ORDER BY rank DESC",
                                 url=url)
-    res = query.fetch(1, idx-1)
+    res = query.fetch(APP, APP*(idx-1))
     if not len(res):
         return None
-    return res[0]
+    return res
