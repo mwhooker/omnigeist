@@ -164,7 +164,7 @@ def set_translations(locale):
         None.
     """
     if locale not in _translations:
-        locales = list(set([locale, get_config(__name__, 'locale')]))
+        locales = [locale, get_config(__name__, 'locale')]
         _translations[locale] = support.Translations.load('locale', locales,
             'messages')
 
