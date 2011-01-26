@@ -7,4 +7,4 @@ In loose order of priority:
     * How do we account for duplicate requests?
     * will need to check for errors more carefully
 * How many times, or what logic should I use to redirect? nytimes brings me to login page. maybe only follow 301s
-* Probably use bookmarklet to display comments. Need to make bookmarklet compiler. Figure out when in the dev cycle this should be run
+* use buildout to do string replacement on js templates. also minify
