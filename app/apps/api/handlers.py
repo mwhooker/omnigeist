@@ -3,6 +3,7 @@ import logging
 import simplejson as json
 
 from tipfy import RequestHandler, Response, render_json_response
+from tipfy.ext.wtforms import validators
 
 from omnigeist import fanout
 from omnigeist import http_util
@@ -21,11 +22,15 @@ class TopApiHandler(RequestHandler):
         providers = ('digg', 'reddit')
         if self.request.args.get('provider') not in providers\
            or 'url' not in self.request.args:
-            return Response(status=400)
+            self.abort(400)
 
         provider = self.request.args['provider']
         url = http_util.canonicalize_url(self.request.args['url'])
-        idx = int(self.request.args.get('idx', 1))
+
+        try:
+            idx = int(self.request.args.get('idx', 1))
+        except ValueError:
+            self.abort(400)
         if idx < 1:
             idx = 1
         
@@ -33,14 +38,14 @@ class TopApiHandler(RequestHandler):
         if provider == 'digg':
             top = models._get_top_digg_comment(url, idx)
             if not top:
-                return Response(status=404)
+                self.abort(404)
             resp['diggs'] = top.diggs
             resp['up'] = top.up
             resp['buries'] = top.down
         elif provider == 'reddit':
             top = models._get_top_reddit_comment(url, idx)
             if not top:
-                return Response(status=404)
+                self.abort(404)
             resp['ups'] = top.ups
             resp['down'] = top.downs
 
@@ -50,7 +55,7 @@ class TopApiHandler(RequestHandler):
         if format == 'js':
             callback = self.request.args.get('callback')
             if not callback:
-                return Response(status=401)
+                self.abort(401)
             response = Response("%s(%s);" % ( callback, json.dumps(resp)))
             response.headers['Content-Type'] = 'text/javascript'
             return response
