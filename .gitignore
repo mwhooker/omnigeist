@@ -12,3 +12,4 @@ eggs
 var
 etc/parts
 etc/downloads
+venv
