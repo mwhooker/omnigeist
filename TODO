@@ -1,7 +1,6 @@
 In loose order of priority:
 
 
-* figure out how to poll taskqueue so we can keep client connection open (channels) while we fetch the result the first time
 * return fat json result. i.e. 100 comments from each provider. 
     look at url structure like:
         /top?url=
@@ -11,3 +10,7 @@ In loose order of priority:
 * How many times, or what logic should I use to redirect? nytimes brings me to login page. maybe only follow 301s
 * use buildout to do string replacement on js templates. also minify
 * Come up with a way to rank comments. Which are most informative? For now, just use most dugg/upvoted, etc.
+* HTTP caching semantics around top endpoint
+* Write input validation for API. i.e. validate URL, numbers, etc.
+
+X figure out how to poll taskqueue so we can keep client connection open (channels) while we fetch the result the first time. For now just running fanout inline

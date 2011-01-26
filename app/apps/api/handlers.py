@@ -30,13 +30,7 @@ class FanoutApiHandler(RequestHandler):
             self.abort(400)
         c_url = http_util.canonicalize_url(url)
 
-        #only call fanout once
-        key = '_'.join(['task_fanout', url])
-        mcd = memcache.Client()
-        lock = mcd.add(key, True, 60*60)
-        if lock:
-            fanout.fanout(c_url)
-            mcd.delete(key)
+        fanout.fanout(c_url)
 
         return Response()
 
@@ -91,13 +85,20 @@ class TopApiHandler(RequestHandler):
         freshness_key = '_'.join(['url_fresh', url])
         if mcd.add(freshness_key, True, 60*60):
             # add to task queue. immediately continue
-            taskqueue.add(url='/fanout', name=hashlib.md5(url).hexdigest(),
+            r = taskqueue.add(url='/fanout', name=hashlib.md5(url).hexdigest(),
                           queue_name='fanout-queue', params={'url': url})
 
         resp = _load_top()
         # No data from the db
         if not resp:
-            self.abort(404)
+            # do the fanout in-band and return the result
+            try:
+                fanout.fanout()
+            except:
+                self.abort(500)
+            resp = _load_top()
+            if not resp:
+                self.abort(404)
 
         if format == 'js':
             callback = self.request.args.get('callback')

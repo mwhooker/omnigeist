@@ -8,6 +8,7 @@ from omnigeist import models
 activity_map = {'digg': 'DiggProvider'}
 
 def fanout(c_url):
+    """TODO: we should raise recoverable errors so the taskqueue can retry the fanout"""
     logging.debug("canonicalizing url: %s" % c_url)
     providers = [activity.DiggProvider,
                  activity.RedditProvider]
