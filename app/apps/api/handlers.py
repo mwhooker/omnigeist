@@ -69,7 +69,7 @@ class TopApiHandler(RequestHandler):
                     digg['up'] = i.up
                     digg['buries'] = i.down
                     for attr in ('author', 'created_on', 'body'):
-                        digg[attr] = str(i.__getattribute__(attr))
+                        digg[attr] = unicode(i.__getattribute__(attr))
                     diggs.append(digg)
                 resp['digg'] = diggs
             top = models._get_top_reddit_comment(url, idx)
@@ -80,7 +80,7 @@ class TopApiHandler(RequestHandler):
                     reddit['ups'] = i.ups
                     reddit['down'] = i.downs
                     for attr in ('author', 'created_on', 'body'):
-                        reddit[attr] = str(i.__getattribute__(attr))
+                        reddit[attr] = unicode(i.__getattribute__(attr))
                     reddits.append(reddit)
                 resp['reddit'] = reddits
 
