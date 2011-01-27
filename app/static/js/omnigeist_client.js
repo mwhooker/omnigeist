@@ -27,24 +27,78 @@ jqueryLoaded = function(callback) {
     return tryReady(0);
 }
 
+omnigeist_tpl = '<div id="omnigeist"><span provider="digg" class="provider" id="provider-digg">Digg</span><span provider="reddit" class="provider" id="provider-reddit">Reddit</span><div class="omnigeist"></div></div>';
 comment_tpl = '<div class="omnigeist"><p><%=body%> &mdash; <%=author%></p></div>';
 
-update_comments = function(idx, provider) {
-    $.ajax({
-        url: "http://localhost:8084/top.js",
-        dataType: 'jsonp',
-        data: ({idx: idx, provider: provider, url: window.location.href}),
-        success: function(data){
-            $('.omnigeist').replaceWith(tmpl(comment_tpl, data));
-    }});
-}
+(function() {
+    var cache = null;
+
+    this.get_comments = function get_comments(idx, provider, success, fail) {
+
+        function _success(data) {
+            var provider_data;
+            if (provider in data) {
+                provider_data = data[provider];
+            } else if (provider == undefined) {
+                for (var p in data) {
+                    if (data[p].length) {
+                        provider_data = data[p];
+                        provider = p;
+                        break;
+                    } else {
+                        continue;
+                    }
+                }
+            }
+
+            if (provider_data == undefined || !provider_data.length) {
+                alert("no data for " + provider);
+                return false;
+            }
+            success(provider_data[0], provider);
+        };
+
+        if (cache) {
+            _success(cache);
+        } else {
+            $.ajax({
+                url: "http://localhost:8084/top.js",
+                dataType: 'jsonp',
+                data: ({idx: idx, url: window.location.href}),
+                success: function(data) {
+                    cache = data;
+                    _success(data);
+                }
+            });
+        }
+    };
+})();
 
 
 main = function() {
-    $('<div id="omnigeist"><div class="omnigeist"></div></div>').appendTo('body');
-    update_comments(1, 'reddit');
-    //$('#omnigeist').addClass('omnigeist');
-    //$('#omnigeist').append('<p></p>');
+    $('body').append(tmpl(omnigeist_tpl));
+    $('#provider-digg, #provider-reddit').click(function() {
+        get_comments(1, $(this).attr('provider'), function(data, provider) {
+            $('.provider').each(function(i) {
+                if ($(this).attr('provider') == provider) { 
+                    $(this).addClass('active-provider');
+                } else {
+                    $(this).removeClass('active-provider');
+                }
+            });
+            $('.omnigeist').replaceWith(tmpl(comment_tpl, data));
+        });
+    });
+    get_comments(1, null, function(data, provider) {
+        $('.provider').each(function(i) {
+            if ($(this).attr('provider') == provider) { 
+                $(this).addClass('active-provider');
+            } else {
+                $(this).removeClass('active-provider');
+            }
+        });
+        $('.omnigeist').replaceWith(tmpl(comment_tpl, data));
+    });
 }
 
 jqueryLoaded(function() {

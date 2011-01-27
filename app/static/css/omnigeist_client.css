@@ -28,3 +28,14 @@
         word-spacing: 1px;
         */
     }
+
+span.provider {
+    color: #FFF;
+    background-color: gray;
+    border: 1px;
+    margin: 2px 5px 2px 5px;
+}
+
+span.active-provider {
+    background-color: #CCC;
+}
