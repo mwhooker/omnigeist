@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import time
+import math
 import hashlib
 import simplejson as json
 
@@ -90,11 +91,17 @@ class TopApiHandler(RequestHandler):
             else:
                 return False
 
+        # TODO: would like to not be calling fanout as often.
+        #       fanout happens twice on a new url. once in queue, one in-band
         # check data for freshness
         freshness_key = '_'.join(['url_fresh', url])
         if mcd.add(freshness_key, True, 60*60):
             # add to task queue. immediately continue
-            r = taskqueue.add(url='/fanout', name=hashlib.md5(url).hexdigest(),
+            """prefix key with hours since epoch to circumvent issues in
+            http://code.google.com/p/googleappengine/issues/detail?id=2459"""
+            name = "%s:%s" % (int(math.floor(time.time() / 60)),
+                              hashlib.md5(url).hexdigest())
+            r = taskqueue.add(url='/fanout', name=name,
                           queue_name='fanout-queue', params={'url': url})
 
         resp = _load_top()
@@ -102,8 +109,9 @@ class TopApiHandler(RequestHandler):
         if not resp:
             # do the fanout in-band and return the result
             try:
-                fanout.fanout()
-            except:
+                fanout.fanout(url)
+            except Exception, e:
+                logging.error(e)
                 self.abort(500)
             resp = _load_top()
             if not resp:
