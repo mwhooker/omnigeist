@@ -51,11 +51,10 @@ class TopApiHandler(RequestHandler):
         if idx < 1:
             idx = 1
         
-        mcd = memcache.Client()
 
         def _load_top():
             resp_cache_key = '_'.join(['cache_top', url])
-            resp = mcd.get(resp_cache_key)
+            resp = memcache.get(resp_cache_key)
             if resp:
                 return resp
             else:
@@ -86,7 +85,7 @@ class TopApiHandler(RequestHandler):
                 resp['reddit'] = reddits
 
             if len(resp):
-                mcd.set(resp_cache_key, resp, 60*15)
+                memcache.set(resp_cache_key, resp, 60*15)
                 return resp
             else:
                 return False
@@ -95,7 +94,7 @@ class TopApiHandler(RequestHandler):
         #       fanout happens twice on a new url. once in queue, one in-band
         # check data for freshness
         freshness_key = '_'.join(['url_fresh', url])
-        if mcd.add(freshness_key, True, 60*60):
+        if memcache.add(freshness_key, True, 60*60):
             # add to task queue. immediately continue
             """prefix key with hours since epoch to circumvent issues in
             http://code.google.com/p/googleappengine/issues/detail?id=2459"""
