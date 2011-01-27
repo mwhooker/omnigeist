@@ -34,6 +34,11 @@ def canonicalize_url(url):
     http://localhost:8080
     """
 
+    key = '_'.join(['c14n', url])
+    cached_url = memcache.get(key)
+    if cached_url:
+        return cached_url
+
     url = resolve_shorturl(url).decode('utf-8')
     # trim off fragment
     scheme, netloc, path, query, _ = urlparse.urlsplit(url)
@@ -45,7 +50,9 @@ def canonicalize_url(url):
     if netloc[-3:] == ':80':
         netloc = netloc[:-3]
 
-    return urlparse.urlunsplit((scheme, netloc, path, query, None))
+    c14n = urlparse.urlunsplit((scheme, netloc, path, query, None))
+    memcache.set(key, c14n)
+    return c14n
 
 
 def resolve_shorturl(url):
