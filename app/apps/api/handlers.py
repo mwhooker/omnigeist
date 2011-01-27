@@ -98,7 +98,7 @@ class TopApiHandler(RequestHandler):
             # add to task queue. immediately continue
             """prefix key with hours since epoch to circumvent issues in
             http://code.google.com/p/googleappengine/issues/detail?id=2459"""
-            name = "%s:%s" % (int(math.floor(time.time() / 60)),
+            name = "%s-%s" % (int(math.floor(time.time() / 60)),
                               hashlib.md5(url).hexdigest())
             r = taskqueue.add(url='/fanout', name=name,
                           queue_name='fanout-queue', params={'url': url})
