@@ -32,6 +32,10 @@ def canonicalize_url(url):
     http://en.wikipedia.org/wiki/Time_Warner?x=1&y=2
     >>> canonicalize_url('http://localhost:8080')
     http://localhost:8080
+    >>> canonicalize_url('http://abcnews.go.com/GMA/video/facebook-blues-12796540?')
+    http://abcnews.go.com/GMA/video/facebook-blues-12796540
+    >>> canonicalize_url('http://abcnews.go.com/GMA/video/facebook-blues-12796540')
+    http://abcnews.go.com/GMA/video/facebook-blues-12796540
     """
 
     key = '_'.join(['c14n', url])

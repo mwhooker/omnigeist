@@ -2,7 +2,7 @@
 import logging
 
 from tipfy import RequestHandler, get_config
-from tipfy.ext.jinja2 import render_response, get_jinja2_instance
+from tipfy.ext.jinja2 import render_template, render_response, get_jinja2_instance
 from jinja2 import MemcachedBytecodeCache
 from google.appengine.api.memcache import Client as MemcachedClient
 
@@ -18,5 +18,10 @@ class BookmarkletWebHandler(RequestHandler):
 
 class ClientWebHandler(RequestHandler):
     def get(self):
+        c = {'host': get_config('web', 'host')}
         return render_response('omnigeist/client.js',
-                               host=get_config('web', 'host'))
+                               comment_tpl=self.render_js_template('omnigeist/comment_tpl.html', **c),
+                               client_tpl=self.render_js_template('omnigeist/client_tpl.html', **c))
+
+    def render_js_template(self, template, **kwargs):
+        return ' '.join(render_template(template, **kwargs).splitlines())

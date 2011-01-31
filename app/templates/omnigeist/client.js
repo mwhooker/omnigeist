@@ -27,8 +27,8 @@ jqueryLoaded = function(callback) {
     return tryReady(0);
 }
 
-omnigeist_tpl = '<div id="omnigeist"><span provider="digg" class="provider" id="provider-digg">Digg</span><span provider="reddit" class="provider" id="provider-reddit">Reddit</span><div class="omnigeist"></div></div>';
-comment_tpl = '<div class="omnigeist"><p><%=body%> &mdash; <%=author%></p></div>';
+omnigeist_tpl = '{{ client_tpl }}';
+comment_tpl = '{{ comment_tpl }}';
 
 (function() {
     var cache = null;
@@ -52,8 +52,7 @@ comment_tpl = '<div class="omnigeist"><p><%=body%> &mdash; <%=author%></p></div>
             }
 
             if (provider_data == undefined || !provider_data.length) {
-                alert("no data for " + provider);
-                return false;
+                return fail(provider);
             }
             success(provider_data[0], provider);
         };
@@ -76,29 +75,25 @@ comment_tpl = '<div class="omnigeist"><p><%=body%> &mdash; <%=author%></p></div>
 
 
 main = function() {
+    function set_comments(data, provider) {
+        $('.provider').each(function(i) {
+          if ($(this).attr('provider') == provider) { 
+            $(this).addClass('active-provider');
+          } else {
+            $(this).removeClass('active-provider');
+          }
+        });
+        $('.comment-container').replaceWith(tmpl(comment_tpl, data));
+    };
+    function fail(provider) {
+      alert("failed to load provider " + provider);
+    }
+
     $('body').append(tmpl(omnigeist_tpl));
     $('#provider-digg, #provider-reddit').click(function() {
-        get_comments(1, $(this).attr('provider'), function(data, provider) {
-            $('.provider').each(function(i) {
-                if ($(this).attr('provider') == provider) { 
-                    $(this).addClass('active-provider');
-                } else {
-                    $(this).removeClass('active-provider');
-                }
-            });
-            $('.omnigeist').replaceWith(tmpl(comment_tpl, data));
-        });
+        get_comments(1, $(this).attr('provider'), set_comments, fail);
     });
-    get_comments(1, null, function(data, provider) {
-        $('.provider').each(function(i) {
-            if ($(this).attr('provider') == provider) { 
-                $(this).addClass('active-provider');
-            } else {
-                $(this).removeClass('active-provider');
-            }
-        });
-        $('.omnigeist').replaceWith(tmpl(comment_tpl, data));
-    });
+    get_comments(1, 'reddit', set_comments, fail);
 }
 
 jqueryLoaded(function() {
