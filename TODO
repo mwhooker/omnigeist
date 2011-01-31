@@ -3,7 +3,7 @@ In loose order of priority:
 
 * return fat json result. i.e. 100 comments from each provider. 
     look at url structure like:
-        /top?url=
+        /top?url= (CHECK)
         /top/[digg, reddit]?url=
         params:
             pagination of some sort.
@@ -12,5 +12,6 @@ In loose order of priority:
 * Come up with a way to rank comments. Which are most informative? For now, just use most dugg/upvoted, etc.
 * HTTP caching semantics around top endpoint
 * Write input validation for API. i.e. validate URL, numbers, etc.
+* should monitor tweets of people a user follows for comments on URLs
 
 X figure out how to poll taskqueue so we can keep client connection open (channels) while we fetch the result the first time. For now just running fanout inline

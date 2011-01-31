@@ -114,6 +114,7 @@ class TopApiHandler(RequestHandler):
                 self.abort(500)
             resp = _load_top()
             if not resp:
+                logging.info("no activity found for %s" % url)
                 self.abort(404)
 
         if format == 'js':

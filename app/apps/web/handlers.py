@@ -15,3 +15,8 @@ class BookmarkletWebHandler(RequestHandler):
     def get(self):
         return render_response('bookmarklet.js',
                                host=get_config('web', 'host'))
+
+class ClientWebHandler(RequestHandler):
+    def get(self):
+        return render_response('omnigeist/client.js',
+                               host=get_config('web', 'host'))

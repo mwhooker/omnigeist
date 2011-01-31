@@ -20,7 +20,8 @@ def get_rules(app):
         A list of class:`tipfy.Rule` instances.
     """
     rules = [
-        Rule('/js/bookmarklet.js', endpoint='omni', handler='apps.web.handlers.BookmarkletWebHandler'),
+        Rule('/js/bookmarklet.js', endpoint='bookmarklet', handler='apps.web.handlers.BookmarkletWebHandler'),
+        Rule('/js/omnigeist/client.js', endpoint='client', handler='apps.web.handlers.ClientWebHandler'),
     ]
 
     return rules
