@@ -43,6 +43,9 @@ class TopApiHandler(RequestHandler):
             self.abort(400)
 
         url = http_util.canonicalize_url(self.request.args['url'])
+        from omnigeist import activity
+        r = activity.RedditProvider(url)
+        
 
         try:
             idx = int(self.request.args.get('idx', 1))
@@ -54,7 +57,7 @@ class TopApiHandler(RequestHandler):
 
         def _load_top():
             resp_cache_key = '_'.join(['cache_top', url])
-            resp = memcache.get(resp_cache_key)
+            resp = None
             if resp:
                 return resp
             else:
@@ -115,6 +118,7 @@ class TopApiHandler(RequestHandler):
             resp = _load_top()
             if not resp:
                 logging.info("no activity found for %s" % url)
+                raise Exception
                 self.abort(404)
 
         if format == 'js':

@@ -12,7 +12,7 @@ except ImportError:
 from functools import wraps
 
 from urls import urls
-from util import urljoin, memoize, limit_chars
+from util import urljoin
 
 DEBUG = True
 
@@ -102,32 +102,6 @@ def require_login(func):
             return func(self, *args, **kwargs)
     return login_reqd_func
 
-class sleep_after(object):
-    """
-    A decorator to add to API functions that shouldn't be called too
-    rapidly, in order to be nice to the reddit server.
-
-    Every function wrapped with this decorator will use a collective
-    last_call_time attribute, so that collectively any one of the funcs won't
-    be callable within the WAIT_BETWEEN_CALL_TIME; they'll automatically be
-    delayed until the proper duration is reached.
-    """
-    WAIT_BETWEEN_CALL_TIME = 1          # seconds
-    last_call_time = 0     # init to 0 to always allow the 1st call
-
-    def __init__(self, func):
-        wraps(func)(self)
-        self.func = func
-
-    def __call__(self, *args, **kwargs):
-        call_time = time.time()
-
-        since_last_call = call_time - self.last_call_time
-        if since_last_call < self.WAIT_BETWEEN_CALL_TIME:
-            time.sleep(self.WAIT_BETWEEN_CALL_TIME - since_last_call)
-
-        self.__class__.last_call_time = call_time
-        return self.func(*args, **kwargs)
 
 def parse_api_json_response(func):
     """Decorator to look at the Reddit API response to an API POST request like
@@ -354,7 +328,6 @@ class Voteable(object):
 
 class Reddit(RedditObject):
     """A class for a reddit session."""
-    DEFAULT_HEADERS = {}
 
     friend = _modify_relationship("friend")
     friend.__doc__ = "Friend the target user."
@@ -362,19 +335,11 @@ class Reddit(RedditObject):
     unfriend = _modify_relationship("friend", unlink=True)
     unfriend.__doc__ = "Unfriend the target user."
 
-    def __init__(self, user_agent=None):
-        if user_agent is None:
-            if DEBUG:
-                user_agent = "Reddit API Python Wrapper (Debug Mode)"
-            else:
-                raise APIException("You need to set a user_agent to identify "
-                                   "your application!")
-        self.DEFAULT_HEADERS["User-agent"] = user_agent
+    def __init__(self, http):
 
         self._cookie_jar = cookielib.CookieJar()
-        opener = urllib2.build_opener(
-            urllib2.HTTPCookieProcessor(self._cookie_jar))
-        urllib2.install_opener(opener)
+        #TODO build an httplib2 handler if http is None
+        self.h = http
 
         self.user = None
 
@@ -694,7 +659,6 @@ class Redditor(RedditContentObject):
         super(Redditor, self).__init__(reddit_session, user_name, json_dict,
                                        fetch)
 
-    @limit_chars()
     def __str__(self):
         """Have the str just be the user's name"""
         return self.user_name.encode("utf8")
@@ -761,7 +725,6 @@ class Subreddit(RedditContentObject):
         super(Subreddit, self).__init__(reddit_session, subreddit_name,
                                         json_dict, fetch)
 
-    @limit_chars()
     def __str__(self):
         """Just display the subreddit name."""
         return self.display_name.encode("utf8")
@@ -838,7 +801,6 @@ class Comment(RedditContentObject, Voteable,  Deletable):
         else:
             self.replies = []
 
-    @limit_chars()
     def __str__(self):
         return getattr(self, "body",
                        "[[ need to fetch more comments... ]]").encode("utf8")
@@ -853,8 +815,6 @@ class Comment(RedditContentObject, Voteable,  Deletable):
                                                 subreddit_name=self.subreddit,
                                                 text=text)
 
-@memoize
-@sleep_after
 def _request(reddit_session, page_url, params=None, url_data=None):
         if url_data:
             page_url += "?" + urllib.urlencode(url_data)
@@ -864,8 +824,7 @@ def _request(reddit_session, page_url, params=None, url_data=None):
         if params:
             encoded_params = urllib.urlencode(params)
 
-        request = urllib2.Request(page_url,
-                                  data=encoded_params,
-                                  headers=reddit_session.DEFAULT_HEADERS)
-        response = urllib2.urlopen(request)
-        return response.read()
+        resp, content  = reddit_session.h.request(page_url, body=encoded_params)
+        if resp.status >= 400:
+            raise APIException("error fetching %s" % info_url)
+        return content

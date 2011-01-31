@@ -8,6 +8,7 @@ try:
 except ImportError:
     import json
 
+import reddit_api as reddit
 from digg.api import Digg, Digg2
 from google.appengine.ext import db
 
@@ -41,28 +42,29 @@ class RedditProvider(Activity):
     def __init__(self, c_url):
         self.url = c_url
         self.eposi = {}
-        # no caching because reddit sucks at http
-        self.h = httplib2.Http(cache=MemcacheFileAdapter('shorturl'))
+        h = httplib2.Http(cache=MemcacheFileAdapter('shorturl'))
+        self.r = reddit.Reddit(h)
+        self.subreddits = None
 
-        info_url = '%s/api/info.json?count=1&url=%s' % (self.REDDIT_URL, c_url)
+        try:
+            info = self.r.info(c_url)
+        except reddit.APIException, e:
+            raise ActivityException(e)
 
-        resp, content = self.h.request(info_url)
-        if resp.status > 299:
-            raise ActivityException("error fetching %s" % info_url)
-        content = json.loads(content)
-
-        for subr in content['data']['children']:
-            epos = self._get_or_create_epos(c_url, subr['data']['subreddit'])
-            epos.subreddit = subr['data']['subreddit']
-            epos.permalink = "%s%s" % (self.REDDIT_URL, subr['data']['permalink'])
-            epos.title = subr['data']['title']
-            epos.ups = subr['data']['ups']
-            epos.downs = subr['data']['downs']
-            epos.ref_id = subr['data']['id']
-            epos.submitted_on = datetime.utcfromtimestamp(subr['data']['created_utc'])
-            epos.author = subr['data']['author']
+        self.subreddits = info
+        for subr in self.subreddits:
+            subr = subr.__dict__
+            epos = self._get_or_create_epos(c_url, str(subr['subreddit']))
+            epos.subreddit = str(subr['subreddit'])
+            epos.permalink = "%s%s" % (self.REDDIT_URL, subr['permalink'])
+            epos.title = subr['title']
+            epos.ups = subr['ups']
+            epos.downs = subr['downs']
+            epos.ref_id = subr['id']
+            epos.submitted_on = datetime.utcfromtimestamp(subr['created_utc'])
+            epos.author = str(subr['author'])
             epos.put()
-            self.eposi[subr['data']['subreddit']] = epos
+            self.eposi[str(subr['subreddit'])] = epos
 
 
         # http://www.reddit.com/api/info.json?count=1&url=http://voices.washingtonpost.com/blog-post/2010/12/openleaks_launches_rivals_wiki.html
@@ -75,22 +77,15 @@ class RedditProvider(Activity):
             resolve (in|ex)clusive ambiguity in name
         """
 
-        for epos in self.eposi:
-            info_url = "%s.json" % self.eposi[epos].permalink
-            resp, content = self.h.request(info_url)
-
-            try:
-                content = json.loads(content)
-            except json.JSONDecodeError, e:
-                logging.debug("error loading %s -> %s" % (info_url, content))
-                continue
-            logging.info("loading comments from %s" % self.eposi[epos].permalink)
-
-            def _process_node(node):
+        for subr in self.subreddits:
+            comments = subr.get_top(10)
+            
+            for comment in comments: 
+                node = comment.__dict__
                 created_on = datetime.utcfromtimestamp(node['created_utc'])
                 key = '_'.join(['reddit', 'comment', node['id']])
                 c = models.RedditUserComment.get_or_insert(key_name=key,
-                                                           parent=self.eposi[epos],
+                                                           parent=self.eposi[subr.subreddit],
                                                            ref_id=node['id'],
                                                            url=self.url,
                                                            activity_created=created_on)
@@ -101,22 +96,11 @@ class RedditProvider(Activity):
                 if node['parent_id'] != node['link_id']:
                     c.reply_to = db.Key.from_path(models.RedditUserComment.kind(),
                                                   parent_key,
-                                                  parent=self.eposi[epos].key())
+                                                  parent=self.eposi[subr.subreddit].key())
                 # TODO: make sure this is unicode
                 c.body = node['body']
-                c.author = node['author']
+                c.author = str(node['author'])
                 c.put()
-
-            def _load_activity(children):
-                if children['kind'] == 'Listing':
-                    for child in children['data']['children']:
-                        _load_activity(child)
-                elif children['kind'] == 't1':
-                    _process_node(children['data'])
-                    if len(children['data']['replies']):
-                        _load_activity(children['data']['replies'])
-
-            _load_activity(content[1])
 
     @property
     def last_updated(self):
