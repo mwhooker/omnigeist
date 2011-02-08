@@ -4,8 +4,6 @@ import urlparse
 from google.appengine.api import memcache
 
 
-USER_AGENT = "Python/shorturl.py"
-
 class ResolveException(Exception): pass
 
 class MemcacheFileAdapter(httplib2.FileCache):
@@ -30,6 +28,10 @@ def canonicalize_url(url):
 
     >>> canonicalize_url('hTTP://EN.WIKIPEDIA.ORG:80/wiki/Time_Warner?x=1&y=2#frag')
     http://en.wikipedia.org/wiki/Time_Warner?x=1&y=2
+    >>> canonicalize_url('http://example.com?a=1&b=2')
+    http://example.com?a=1&b=2
+    >>> canonicalize_url('http://example.com?b=2&a=1')
+    http://example.com?a=1&b=2
     >>> canonicalize_url('http://localhost:8080')
     http://localhost:8080
     >>> canonicalize_url('http://abcnews.go.com/GMA/video/facebook-blues-12796540?')
@@ -62,7 +64,6 @@ def canonicalize_url(url):
 def resolve_shorturl(url):
 
     h = httplib2.Http(cache=MemcacheFileAdapter('shorturl'))
-    headers = { 'User-Agent' : USER_AGENT }
 
     try:
         resp, _ = h.request(url, "HEAD", redirections=10)

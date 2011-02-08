@@ -69,9 +69,9 @@ except ImportError:
 
 
 if sys.version_info >= (2,3):
-    from iri2uri import iri2uri
+    from iri2uri import iri2uri as firi2uri
 else:
-    def iri2uri(uri):
+    def firi2uri(uri):
         return uri
 
 def has_timeout(timeout): # python 2.6
@@ -993,7 +993,7 @@ a string that contains the response entity body.
             if not headers.has_key('user-agent'):
                 headers['user-agent'] = "Python-httplib2/%s" % __version__
 
-            uri = iri2uri(uri)
+            uri = firi2uri(uri)
 
             (scheme, authority, request_uri, defrag_uri) = urlnorm(uri)
             domain_port = authority.split(":")[0:2]
