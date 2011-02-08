@@ -24,20 +24,20 @@ class MemcacheFileAdapter(httplib2.FileCache):
         self.client.set(key, value, namespace=self.namespace)
 
 def canonicalize_url(url):
-    """Canoninicalize urls
+    """Canoninicalize urls. a semantic operation.
 
     >>> canonicalize_url('hTTP://EN.WIKIPEDIA.ORG:80/wiki/Time_Warner?x=1&y=2#frag')
-    http://en.wikipedia.org/wiki/Time_Warner?x=1&y=2
+    'http://en.wikipedia.org/wiki/Time_Warner?x=1&y=2'
     >>> canonicalize_url('http://example.com?a=1&b=2')
-    http://example.com?a=1&b=2
+    'http://example.com?a=1&b=2'
     >>> canonicalize_url('http://example.com?b=2&a=1')
-    http://example.com?a=1&b=2
+    'http://example.com?a=1&b=2'
     >>> canonicalize_url('http://localhost:8080')
-    http://localhost:8080
+    'http://localhost:8080'
     >>> canonicalize_url('http://abcnews.go.com/GMA/video/facebook-blues-12796540?')
-    http://abcnews.go.com/GMA/video/facebook-blues-12796540
+    'http://abcnews.go.com/GMA/video/facebook-blues-12796540'
     >>> canonicalize_url('http://abcnews.go.com/GMA/video/facebook-blues-12796540')
-    http://abcnews.go.com/GMA/video/facebook-blues-12796540
+    'http://abcnews.go.com/GMA/video/facebook-blues-12796540'
     """
 
     key = '_'.join(['c14n', url])
@@ -45,12 +45,15 @@ def canonicalize_url(url):
     if cached_url:
         return cached_url
 
-    url = resolve_shorturl(url).decode('utf-8')
+    #url = resolve_shorturl(url)
     # trim off fragment
     scheme, netloc, path, query, _ = urlparse.urlsplit(url)
 
+    # sort query string
+    query = '&'.join(sorted(query.split('&')))
+
     # lowercase scheme and netloc
-    scheme, netloc = map(unicode.lower, [scheme, netloc])
+    scheme, netloc = map(str.lower, [scheme, netloc])
 
     #remove default port if exists
     if netloc[-3:] == ':80':
